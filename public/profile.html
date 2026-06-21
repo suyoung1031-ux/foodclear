@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>내 프로필</title>
-  <script>if (!localStorage.getItem('auth_token')) location.replace('/login.html');</script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -200,15 +199,11 @@
 <body>
 
   <nav class="nav">
-    <a href="/" class="nav-brand">🧊 냉장고 셰프</a>
-    <a href="/">재료 인식</a>
-    <a href="/step2.html">레시피 추천</a>
-    <a href="/step3.html">보관함</a>
-    <a href="/profile.html" class="active">내 프로필</a>
-    <div class="nav-right">
-      <span class="nav-username" id="nav-username"></span>
-      <button class="nav-logout" id="nav-logout">로그아웃</button>
-    </div>
+    <a href="index.html" class="nav-brand">🧊 냉장고 셰프</a>
+    <a href="index.html">재료 인식</a>
+    <a href="step2.html">레시피 추천</a>
+    <a href="step3.html">보관함</a>
+    <a href="profile.html" class="active">내 프로필</a>
   </nav>
 
   <div class="container">
@@ -288,18 +283,6 @@
   <div class="toast" id="toast" aria-live="polite"></div>
 
   <script>
-    // ── 인증 초기화 ──────────────────────────────
-    (function initAuth() {
-      const token = localStorage.getItem('auth_token');
-      const user = JSON.parse(localStorage.getItem('auth_user') || 'null');
-      if (user) document.getElementById('nav-username').textContent = user.name + '님';
-      document.getElementById('nav-logout').addEventListener('click', function () {
-        fetch('/api/auth/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('auth_user');
-        location.href = '/login.html';
-      });
-    })();
 
     // ── 유틸 ──────────────────────────────────
     function loadProfile() {

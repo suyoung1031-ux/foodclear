@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>레시피 추천 — Step 2</title>
-  <script>if (!localStorage.getItem('auth_token')) location.replace('/login.html');</script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -463,22 +462,18 @@
 </head>
 <body>
   <nav class="nav">
-    <a href="/" class="nav-brand">🧊 냉장고 셰프</a>
-    <a href="/">재료 인식</a>
-    <a href="/step2.html" class="active">레시피 추천</a>
-    <a href="/step3.html">보관함</a>
-    <a href="/profile.html">내 프로필</a>
-    <div class="nav-right">
-      <span class="nav-username" id="nav-username"></span>
-      <button class="nav-logout" id="nav-logout">로그아웃</button>
-    </div>
+    <a href="index.html" class="nav-brand">🧊 냉장고 셰프</a>
+    <a href="index.html">재료 인식</a>
+    <a href="step2.html" class="active">레시피 추천</a>
+    <a href="step3.html">보관함</a>
+    <a href="profile.html">내 프로필</a>
   </nav>
 
   <div class="container">
     <!-- 프로필 배너 -->
     <div class="profile-banner" id="profile-banner">
       <span>👤</span><span id="profile-banner-text"></span>
-      <a href="/profile.html" style="margin-left:auto; color:#276749; font-size:0.8rem;">수정</a>
+      <a href="profile.html" style="margin-left:auto; color:#276749; font-size:0.8rem;">수정</a>
     </div>
 
     <!-- 옵션 카드 -->
@@ -575,18 +570,6 @@
   <div class="toast" id="toast" aria-live="polite"></div>
 
   <script>
-    // ── 인증 초기화 ──────────────────────────────
-    (function initAuth() {
-      const token = localStorage.getItem('auth_token');
-      const user = JSON.parse(localStorage.getItem('auth_user') || 'null');
-      if (user) document.getElementById('nav-username').textContent = user.name + '님';
-      document.getElementById('nav-logout').addEventListener('click', function () {
-        fetch('/api/auth/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('auth_user');
-        location.href = '/login.html';
-      });
-    })();
 
     // ──────────────────────────────────────
     // 초기화
@@ -620,7 +603,7 @@
     // 재료 태그 렌더링
     const tagsRow = document.getElementById("ingredients-tags");
     if (ingredients.length === 0) {
-      tagsRow.innerHTML = '<span style="color:#a0aec0">재료가 없습니다. <a href="/">Step 1로 돌아가세요.</a></span>';
+      tagsRow.innerHTML = '<span style="color:#a0aec0">재료가 없습니다. <a href="index.html">Step 1로 돌아가세요.</a></span>';
     } else {
       tagsRow.innerHTML = ingredients.map(i => `<span class="tag">${i}</span>`).join("");
     }
@@ -668,7 +651,6 @@
       errorBox.style.display = "none";
 
       try {
-        const token = localStorage.getItem('auth_token');
         const body = {
           ingredients,
           options: {
@@ -686,7 +668,6 @@
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": "Bearer " + token,
           },
           body: JSON.stringify(body),
         });
