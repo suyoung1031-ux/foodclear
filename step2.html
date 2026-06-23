@@ -593,6 +593,8 @@
 
   <script>
 
+    const API_BASE = "https://foodclear-h0e4.onrender.com";
+
     // ──────────────────────────────────────
     // 초기화
     // ──────────────────────────────────────
@@ -686,7 +688,7 @@
           ...(withNonce ? { nonce: Date.now() } : {}),
         };
 
-        const res = await fetch("/api/recipes", {
+        const res = await fetch(`${API_BASE}/api/recipes`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
