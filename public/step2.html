@@ -425,10 +425,28 @@
     .nutrition-value { font-size: 1rem; font-weight: 700; color: #2d3748; }
     .nutrition-label { font-size: 0.75rem; color: #718096; margin-top: 2px; }
 
+    /* 메모 */
+    .memo-wrap { margin-top: 20px; }
+    .memo-wrap label { font-size: 0.82rem; font-weight: 600; color: #718096; display: block; margin-bottom: 6px; }
+    .memo-wrap textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      color: #2d3748;
+      resize: vertical;
+      min-height: 60px;
+      outline: none;
+      font-family: inherit;
+      transition: border-color 0.15s;
+    }
+    .memo-wrap textarea:focus { border-color: #4299e1; }
+
     /* 저장 버튼 */
     .save-btn {
       width: 100%;
-      margin-top: 20px;
+      margin-top: 12px;
       padding: 14px;
       background: #48bb78;
       color: #fff;
@@ -562,6 +580,10 @@
         <div class="nutrition-grid" id="m-nutrition"></div>
       </div>
 
+      <div class="memo-wrap" id="memo-section">
+        <label for="m-memo">메모 (선택)</label>
+        <textarea id="m-memo" placeholder="다음엔 간장 줄이기, 고수 추가 등 자유롭게 작성하세요..."></textarea>
+      </div>
       <button class="save-btn" id="m-save-btn">레시피 저장하기</button>
     </div>
   </div>
@@ -740,7 +762,7 @@
       });
     }
 
-    function saveRecipe(idx, cardSaveBtn) {
+    function saveRecipe(idx, cardSaveBtn, memo = "") {
       const r = recipes[idx];
       if (isRecipeSaved(r.name)) return;
 
@@ -749,7 +771,7 @@
         id: `saved_${Date.now()}`,
         recipe: r,
         source_ingredients: [...ingredients],
-        memo: "",
+        memo: memo.trim(),
         saved_at: new Date().toISOString(),
       });
       localStorage.setItem("savedRecipes", JSON.stringify(saved));
@@ -842,6 +864,10 @@
       saveBtn.className = "save-btn" + (alreadySaved ? " saved" : "");
       saveBtn.disabled = alreadySaved;
 
+      // 메모 초기화
+      document.getElementById("m-memo").value = "";
+      document.getElementById("memo-section").style.display = alreadySaved ? "none" : "block";
+
       backdrop.classList.add("open");
       document.body.style.overflow = "hidden";
     }
@@ -866,7 +892,8 @@
     saveBtn.addEventListener("click", () => {
       if (!currentRecipe || saveBtn.disabled) return;
       const idx = recipes.findIndex(r => r.name === currentRecipe.name);
-      saveRecipe(idx, recipeGrid.querySelector(`.card-save-btn[data-idx="${idx}"]`));
+      const memo = document.getElementById("m-memo").value;
+      saveRecipe(idx, recipeGrid.querySelector(`.card-save-btn[data-idx="${idx}"]`), memo);
     });
 
     // ──────────────────────────────────────

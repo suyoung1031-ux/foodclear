@@ -32,15 +32,20 @@
 - 업로드 전 미리보기 표시
 
 ### F2. 이미지 분석 API 호출
-- 모델: `google/gemma-4-31b-it:free`
-- 이미지를 base64로 인코딩하여 OpenRouter API에 전송
-- 프롬프트: 냉장고 안의 식재료를 구체적으로 목록화하도록 지시
+- 모델: `google/gemma-4-31b-it:free` (OpenRouter)
+- 이미지를 base64로 인코딩하여 서버(`POST /api/analyze`)에 전송
+- 서버가 OpenRouter API를 호출하여 식재료 목록을 JSON으로 반환
 
-**시스템 프롬프트 (예시)**
+**프롬프트**
 ```
-You are a food ingredient detection assistant.
-Analyze the refrigerator image and extract all visible ingredients.
-Return a JSON array of ingredients with name, quantity (estimated), and confidence score.
+이 냉장고 사진을 분석해서 보이는 모든 식재료를 추출해줘.
+아래 JSON 형식으로만 응답해:
+{
+  "ingredients": [
+    { "name": "재료명(한국어)", "quantity": "예상 수량", "confidence": 0.95 }
+  ],
+  "raw_description": "냉장고 안 전체에 대한 한국어 한 줄 설명"
+}
 ```
 
 **응답 형식 (JSON)**
@@ -48,10 +53,10 @@ Return a JSON array of ingredients with name, quantity (estimated), and confiden
 {
   "ingredients": [
     { "name": "달걀", "quantity": "6개", "confidence": 0.95 },
-    { "name": "우유", "quantity": "1L", "confidence": 0.88 },
+    { "name": "우유", "quantity": "1L",  "confidence": 0.88 },
     { "name": "당근", "quantity": "2개", "confidence": 0.72 }
   ],
-  "raw_description": "냉장고 안에는 달걀 6개, 우유 1팩..."
+  "raw_description": "냉장고 안에는 달걀 6개, 우유 1팩, 당근 2개가 있습니다."
 }
 ```
 
@@ -68,9 +73,9 @@ Return a JSON array of ingredients with name, quantity (estimated), and confiden
 | 항목 | 요건 |
 |------|------|
 | 응답 시간 | API 응답 10초 이내 |
-| Rate Limit 처리 | 429 오류 시 최대 3회 자동 재시도 (지수 백오프) |
+| Rate Limit 처리 | 429 오류 시 즉시 클라이언트에 알림 (서버 재시도 없음) |
 | 오류 처리 | 분석 실패 시 수동 입력 모드로 전환 |
-| 로딩 상태 | 분석 중 스피너 및 단계별 진행 메시지 표시 |
+| 로딩 상태 | 분석 중 스피너 및 진행 메시지 표시 |
 
 ---
 
@@ -102,10 +107,11 @@ Return a JSON array of ingredients with name, quantity (estimated), and confiden
 
 | 영역 | 기술 |
 |------|------|
-| 프론트엔드 | HTML5, Vanilla JS (또는 React) |
+| 프론트엔드 | HTML5, Vanilla JS |
 | 백엔드 | Node.js (Express) |
-| API | OpenRouter → `google/gemma-4-31b-it:free` |
+| AI 모델 | OpenRouter → `google/gemma-4-31b-it:free` |
 | 이미지 처리 | 브라우저 FileReader API → base64 변환 |
+| API 키 관리 | 서버 `.env`에 보관, 프론트엔드에 미노출 |
 
 ---
 
@@ -116,7 +122,8 @@ Return a JSON array of ingredients with name, quantity (estimated), and confiden
 **Request**
 ```json
 {
-  "image": "data:image/jpeg;base64,/9j/4AAQSkZJRg..."
+  "image": "data:image/jpeg;base64,/9j/4AAQSkZJRg...",
+  "mimeType": "image/jpeg"
 }
 ```
 
@@ -126,7 +133,8 @@ Return a JSON array of ingredients with name, quantity (estimated), and confiden
   "success": true,
   "ingredients": [
     { "name": "달걀", "quantity": "6개", "confidence": 0.95 }
-  ]
+  ],
+  "raw_description": "냉장고 안에는..."
 }
 ```
 
@@ -134,8 +142,8 @@ Return a JSON array of ingredients with name, quantity (estimated), and confiden
 ```json
 {
   "success": false,
-  "error": "rate_limit",
-  "retry_after": 30
+  "error": "AI 서비스 사용량 한도에 도달했습니다.",
+  "retry_after": 60
 }
 ```
 
@@ -144,7 +152,7 @@ Return a JSON array of ingredients with name, quantity (estimated), and confiden
 ## 완료 기준 (Definition of Done)
 
 - [ ] 이미지 업로드 및 미리보기 동작
-- [ ] base64 변환 후 OpenRouter API 호출 성공
+- [ ] base64 변환 후 `/api/analyze` 호출 성공
 - [ ] 재료 목록이 편집 가능한 태그로 렌더링
-- [ ] Rate Limit 시 자동 재시도 로직 동작
-- [ ] 2단계 진행 버튼 클릭 시 재료 데이터 전달
+- [ ] Rate Limit(429) 시 사용자에게 안내 메시지 표시
+- [ ] "레시피 추천받기" 클릭 시 재료 데이터가 2단계로 전달

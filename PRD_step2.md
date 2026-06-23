@@ -2,7 +2,7 @@
 
 ## 개요
 
-1단계에서 추출된 재료 목록을 `openai/gpt-oss-120b:free` 모델에 전달하여 실용적인 레시피를 생성하고 화면에 표시한다.
+1단계에서 추출된 재료 목록을 `google/gemma-4-26b-a4b-it:free` 모델에 전달하여 맞춤형 레시피 3가지를 생성하고 화면에 표시한다.
 
 ---
 
@@ -22,6 +22,7 @@
 | 2 | 사용자 | 조리 시간과 인분 수를 설정하고 싶다 | 나의 상황에 맞는 레시피를 받을 수 있다 |
 | 3 | 사용자 | 레시피의 조리 과정을 단계별로 보고 싶다 | 쉽게 따라할 수 있다 |
 | 4 | 사용자 | 마음에 드는 레시피를 저장하고 싶다 | 나중에 다시 볼 수 있다 |
+| 5 | 사용자 | 다른 레시피를 재생성하고 싶다 | 마음에 드는 레시피를 찾을 수 있다 |
 
 ---
 
@@ -31,27 +32,30 @@
 - 조리 시간: 15분 이하 / 30분 이하 / 60분 이하 / 제한 없음
 - 인분 수: 1인분 / 2인분 / 4인분 이상
 - 식단 제한 (다중 선택): 없음 / 채식 / 비건 / 글루텐프리 / 유제품프리
+- 알레르기 재료: 텍스트 입력 (3단계 프로필이 있으면 자동 적용)
 
 ### F2. 레시피 생성 API 호출
-- 모델: `openai/gpt-oss-120b:free`
+- 모델: `google/gemma-4-26b-a4b-it:free` (OpenRouter)
 - 1단계 재료 목록 + 사용자 설정을 프롬프트로 전달
-- 최대 3개의 레시피 제안
+- 레시피 3개 생성
+- 동일 재료 조합은 서버 메모리에 10분간 캐싱 (비용 절감)
+- `nonce` 파라미터 전송 시 캐시 우회 (재생성 기능에 사용)
 
-**시스템 프롬프트 (예시)**
+**시스템 프롬프트**
 ```
-You are a professional recipe generator.
-Given a list of available ingredients, generate practical Korean-style recipes.
-Always respond in Korean. Return valid JSON only.
+당신은 전문 요리사이자 레시피 생성 AI입니다.
+반드시 유효한 JSON만 응답하세요. 마크다운 코드블록 없이 순수 JSON만 출력하세요.
+모든 텍스트는 한국어로 작성하세요.
 ```
 
-**사용자 프롬프트 (예시)**
+**사용자 프롬프트**
 ```
-사용 가능한 재료: 달걀, 우유, 당근, 양파, 간장
+사용 가능한 재료: 달걀, 우유, 당근, 양파
 조리 시간: 30분 이하
 인분 수: 2인분
 식단 제한: 없음
 
-위 재료로 만들 수 있는 레시피 3가지를 JSON으로 생성해줘.
+위 조건에 맞는 레시피 3가지를 JSON으로 생성해줘.
 ```
 
 **응답 형식 (JSON)**
@@ -66,8 +70,8 @@ Always respond in Korean. Return valid JSON only.
       "servings": 2,
       "difficulty": "쉬움",
       "ingredients": [
-        { "name": "달걀", "amount": "3개" },
-        { "name": "당근", "amount": "1/2개" }
+        { "name": "달걀", "amount": "3개", "available": true },
+        { "name": "당근", "amount": "1/2개", "available": true }
       ],
       "steps": [
         { "step": 1, "description": "당근을 채 썬다." },
@@ -85,15 +89,17 @@ Always respond in Korean. Return valid JSON only.
 }
 ```
 
+> `available` 필드: 1단계에서 인식된 재료면 `true`, 추가로 필요한 재료면 `false`
+
 ### F3. 레시피 결과 표시
-- 카드형 UI로 3개의 레시피 표시
+- 카드형 UI로 3개 레시피 표시
 - 각 카드: 레시피명, 조리 시간, 난이도, 간단 설명
-- 카드 클릭 시 상세 페이지(재료 목록 + 단계별 조리법)로 이동
-- 상세 페이지에서 "저장하기" 버튼으로 3단계 연계
+- 카드 클릭 시 상세 보기 (재료 목록 + 단계별 조리법 + 영양 정보)
+- 상세 보기에서 "저장하기" 버튼으로 3단계 연계
 
 ### F4. 레시피 재생성
-- "다른 레시피 보기" 버튼으로 새로운 레시피 재요청
-- 동일 재료로 다른 조합 생성
+- "다른 레시피 보기" 버튼 클릭 시 `nonce`를 포함해 재요청
+- 캐시를 우회하여 새로운 레시피 조합 생성
 
 ---
 
@@ -101,10 +107,10 @@ Always respond in Korean. Return valid JSON only.
 
 | 항목 | 요건 |
 |------|------|
-| 응답 시간 | API 응답 15초 이내 |
-| 스트리밍 | SSE(Server-Sent Events)로 레시피 단계적 표시 |
-| 오류 처리 | JSON 파싱 실패 시 원문 텍스트로 표시 |
-| 캐싱 | 동일 재료 조합은 10분간 결과 캐시 |
+| 응답 시간 | API 응답 20초 이내 |
+| 캐싱 | 동일 재료+옵션 조합은 서버 메모리에 10분 캐싱 |
+| 오류 처리 | JSON 파싱 실패 시 원문을 단일 레시피로 래핑하여 표시 |
+| available 보정 | 서버에서 재료 목록과 대조하여 available 필드 재검증 |
 
 ---
 
@@ -116,20 +122,20 @@ Always respond in Korean. Return valid JSON only.
 ├─────────────────────────────────────────┤
 │  재료: [달걀] [우유] [당근] [양파]       │
 │                                         │
-│  조리 시간: [30분 이하▼]  인원: [2인▼]  │
+│  조리 시간: [30분 이하 ▼]  인원: [2인 ▼]│
 │  식단: [ ] 채식  [ ] 비건               │
 │                                         │
 │         [ 레시피 생성하기 ]              │
 ├─────────────────────────────────────────┤
 │  ┌─────────────┐  ┌─────────────┐       │
-│  │ 달걀 채소볶음│  │ 우유 수프   │       │
-│  │ ⏱ 20분 | 쉬움│  │ ⏱ 25분 | 쉬움│    │
-│  │ [자세히 보기]│  │ [자세히 보기]│      │
+│  │달걀 채소볶음 │  │ 우유 수프   │       │
+│  │⏱ 20분 | 쉬움│  │⏱ 25분 | 쉬움│     │
+│  │[자세히 보기] │  │[자세히 보기] │       │
 │  └─────────────┘  └─────────────┘       │
 │  ┌─────────────┐                        │
 │  │ 당근 볶음밥 │                        │
-│  │ ⏱ 15분 | 쉬움│                      │
-│  │ [자세히 보기]│                        │
+│  │⏱ 15분 | 쉬움│                       │
+│  │[자세히 보기] │                        │
 │  └─────────────┘                        │
 │                                         │
 │         [ 다른 레시피 보기 ↻ ]          │
@@ -142,11 +148,11 @@ Always respond in Korean. Return valid JSON only.
 
 | 영역 | 기술 |
 |------|------|
-| 프론트엔드 | HTML5, Vanilla JS (또는 React) |
+| 프론트엔드 | HTML5, Vanilla JS |
 | 백엔드 | Node.js (Express) |
-| API | OpenRouter → `openai/gpt-oss-120b:free` |
-| 스트리밍 | SSE (`text/event-stream`) |
-| 상태 관리 | 세션 스토리지 (재료 목록 → 레시피 결과) |
+| AI 모델 | OpenRouter → `google/gemma-4-26b-a4b-it:free` |
+| 캐싱 | 서버 메모리 (Map, TTL 10분, 최대 200건) |
+| 상태 전달 | sessionStorage (1단계 재료 → 2단계 전달) |
 
 ---
 
@@ -161,8 +167,11 @@ Always respond in Korean. Return valid JSON only.
   "options": {
     "max_cook_time": 30,
     "servings": 2,
-    "dietary": []
-  }
+    "dietary": [],
+    "allergies": [],
+    "disliked": []
+  },
+  "nonce": "재생성시에만_포함"
 }
 ```
 
@@ -170,13 +179,10 @@ Always respond in Korean. Return valid JSON only.
 ```json
 {
   "success": true,
+  "cached": false,
   "recipes": [ ... ]
 }
 ```
-
-### `GET /api/recipes/stream` (SSE)
-
-스트리밍 응답 지원 — 레시피가 생성되는 대로 클라이언트에 전송.
 
 ---
 
@@ -184,21 +190,22 @@ Always respond in Korean. Return valid JSON only.
 
 ```
 [Step 1 결과]
-  ingredients[] 
+  ingredients[]
         │
         ▼
 [Step 2 옵션 입력]
-  cook_time, servings, dietary
+  cook_time, servings, dietary, allergies
         │
         ▼
-[OpenRouter API]
-  openai/gpt-oss-120b:free
+[POST /api/recipes]
+  캐시 확인 → 없으면 OpenRouter API 호출
+  (google/gemma-4-26b-a4b-it:free)
         │
         ▼
-[레시피 JSON 파싱]
+[레시피 JSON 파싱 + available 보정]
         │
         ▼
-[카드 UI 렌더링] ──→ [상세 보기] ──→ [Step 3: 저장]
+[카드 UI 렌더링] → [상세 보기] → [Step 3: 저장]
 ```
 
 ---
@@ -207,7 +214,8 @@ Always respond in Korean. Return valid JSON only.
 
 - [ ] 1단계 재료 목록이 2단계로 정상 전달됨
 - [ ] 레시피 생성 옵션(시간/인분/식단) UI 동작
-- [ ] OpenRouter API 호출 후 JSON 파싱 성공
+- [ ] `/api/recipes` 호출 후 JSON 파싱 성공
 - [ ] 레시피 3개가 카드 형태로 표시됨
-- [ ] 상세 페이지에서 단계별 조리법 확인 가능
-- [ ] "저장하기" 버튼 클릭 시 3단계로 전달
+- [ ] 상세 보기에서 단계별 조리법 및 영양 정보 확인 가능
+- [ ] "다른 레시피 보기" 클릭 시 새로운 레시피 생성
+- [ ] "저장하기" 버튼 클릭 시 3단계로 연계

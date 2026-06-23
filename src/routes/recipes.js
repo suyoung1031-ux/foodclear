@@ -1,6 +1,6 @@
-import { OPENROUTER_API_KEY } from "../config.js";
+import { OPENAI_API_KEY } from "../config.js";
 
-const MODEL = "openai/gpt-oss-120b:free";
+const MODEL = "gpt-4o-mini";
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10분
 const MAX_CACHE_SIZE = 200; // 최대 캐시 항목 수
 
@@ -152,10 +152,10 @@ export async function generateRecipes(req, res) {
       }
     }
 
-    const apiRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const apiRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -164,12 +164,13 @@ export async function generateRecipes(req, res) {
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: buildPrompt(ingredients, opts) },
         ],
+        max_tokens: 2048,
       }),
     });
 
     if (!apiRes.ok) {
       const text = await apiRes.text();
-      throw new Error(`OpenRouter HTTP ${apiRes.status}: ${text}`);
+      throw new Error(`OpenAI HTTP ${apiRes.status}: ${text}`);
     }
 
     const data = await apiRes.json();

@@ -1,15 +1,15 @@
-import { OPENROUTER_API_KEY } from "./config.js";
+import { OPENAI_API_KEY } from "./config.js";
 
-console.log("=== 텍스트 인식 테스트 (openai/gpt-oss-120b:free) ===\n");
+console.log("=== 텍스트 인식 테스트 (gpt-4o-mini) ===\n");
 
-const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+const response = await fetch("https://api.openai.com/v1/chat/completions", {
   method: "POST",
   headers: {
-    "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+    "Authorization": `Bearer ${OPENAI_API_KEY}`,
     "Content-Type": "application/json",
   },
   body: JSON.stringify({
-    model: "openai/gpt-oss-120b:free",
+    model: "gpt-4o-mini",
     messages: [
       {
         role: "user",
