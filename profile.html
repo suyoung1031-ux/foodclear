@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>내 프로필</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      padding: 0 0 60px;
+    }
+
+    /* ── 네비 ── */
+    .nav {
+      background: #fff;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0;
+      min-height: 52px;
+    }
+    .nav-brand { font-weight: 700; color: #1a202c; margin-right: 24px; font-size: 1rem; text-decoration: none; }
+    .nav a {
+      padding: 0 14px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      color: #718096;
+      text-decoration: none;
+      font-size: 0.9rem;
+      border-bottom: 2px solid transparent;
+      transition: color 0.15s;
+    }
+    .nav a:hover { color: #2d3748; }
+    .nav a.active { color: #4299e1; border-bottom-color: #4299e1; font-weight: 600; }
+    .nav-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+    .nav-username { font-size: 0.875rem; color: #4a5568; }
+    .nav-logout { padding: 6px 14px; background: #e2e8f0; border: none; border-radius: 6px; font-size: 0.85rem; cursor: pointer; color: #2d3748; }
+    .nav-logout:hover { background: #cbd5e0; }
+    @media (max-width: 768px) {
+      .nav a { font-size: 0.8rem; padding: 0 8px; }
+    }
+    @media (max-width: 480px) {
+      .nav-username { display: none; }
+      .nav-brand { margin-right: 12px; }
+    }
+
+    .container { max-width: 600px; margin: 40px auto; padding: 0 16px; }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.08);
+      padding: 36px;
+    }
+
+    h1 { font-size: 1.4rem; font-weight: 700; color: #1a202c; margin-bottom: 6px; }
+    .subtitle { font-size: 0.875rem; color: #718096; margin-bottom: 28px; }
+
+    .field { margin-bottom: 22px; }
+    .field label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #4a5568;
+      margin-bottom: 8px;
+    }
+    .field input[type="text"],
+    .field input[type="number"],
+    .field select {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      color: #2d3748;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .field input:focus, .field select:focus { border-color: #4299e1; }
+    .field input.error { border-color: #fc8181; }
+    .error-msg { font-size: 0.8rem; color: #e53e3e; margin-top: 4px; display: none; }
+
+    /* 식단 선호 체크박스 */
+    .check-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .check-group label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border: 1px solid #e2e8f0;
+      border-radius: 20px;
+      font-size: 0.875rem;
+      color: #4a5568;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+    .check-group label.on {
+      background: #bee3f8;
+      border-color: #4299e1;
+      color: #2b6cb0;
+    }
+    .check-group input { display: none; }
+
+    /* 태그 입력 */
+    .tag-input-wrap {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 8px 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      cursor: text;
+      transition: border-color 0.15s;
+      min-height: 46px;
+    }
+    .tag-input-wrap:focus-within { border-color: #4299e1; }
+    .tag-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #fed7d7;
+      color: #c53030;
+      border: 1px solid #fc8181;
+      border-radius: 14px;
+      padding: 3px 10px;
+      font-size: 0.82rem;
+      font-weight: 500;
+    }
+    .tag-chip.disliked { background: #fefcbf; color: #744210; border-color: #f6e05e; }
+    .tag-chip button {
+      background: none; border: none; cursor: pointer;
+      color: inherit; opacity: 0.6; font-size: 0.9rem; padding: 0; line-height: 1;
+    }
+    .tag-chip button:hover { opacity: 1; }
+    .tag-input-wrap input {
+      border: none; outline: none; font-size: 0.875rem;
+      color: #2d3748; min-width: 80px; flex: 1; padding: 2px 4px;
+      background: transparent;
+    }
+
+    /* 두 컬럼 */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 480px) { .two-col { grid-template-columns: 1fr; } }
+
+    /* 버튼 */
+    .btn-row { display: flex; gap: 12px; margin-top: 28px; }
+    .btn-save {
+      flex: 1;
+      padding: 13px;
+      background: #4299e1;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-save:hover { background: #3182ce; }
+    .btn-reset {
+      padding: 13px 20px;
+      background: #fff;
+      color: #e53e3e;
+      border: 1px solid #fc8181;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-reset:hover { background: #fff5f5; }
+
+    /* 토스트 */
+    .toast {
+      position: fixed;
+      bottom: 30px; left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #2d3748; color: #fff;
+      padding: 12px 24px; border-radius: 24px;
+      font-size: 0.9rem; z-index: 200;
+      transition: transform 0.3s; white-space: nowrap;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    .divider { height: 1px; background: #e2e8f0; margin: 24px 0; }
+    .hint { font-size: 0.8rem; color: #a0aec0; margin-top: 6px; }
+  </style>
+</head>
+<body>
+
+  <nav class="nav">
+    <a href="index.html" class="nav-brand">🧊 냉장고 셰프</a>
+    <a href="index.html">재료 인식</a>
+    <a href="step2.html">레시피 추천</a>
+    <a href="step3.html">보관함</a>
+    <a href="profile.html" class="active">내 프로필</a>
+  </nav>
+
+  <div class="container">
+    <div class="card">
+      <h1>👤 내 프로필</h1>
+      <p class="subtitle">식단 정보를 저장하면 레시피 추천 시 자동으로 반영됩니다.</p>
+
+      <!-- 이름 -->
+      <div class="field">
+        <label for="name">이름 <span style="color:#e53e3e">*</span></label>
+        <input type="text" id="name" placeholder="홍길동" maxlength="20" />
+        <p class="error-msg" id="name-err">이름을 입력해주세요.</p>
+      </div>
+
+      <!-- 식단 선호 -->
+      <div class="field">
+        <label>식단 선호</label>
+        <div class="check-group" id="dietary-group">
+          <label data-val="채식"><input type="checkbox" />채식</label>
+          <label data-val="비건"><input type="checkbox" />비건</label>
+          <label data-val="글루텐프리"><input type="checkbox" />글루텐프리</label>
+          <label data-val="유제품프리"><input type="checkbox" />유제품프리</label>
+          <label data-val="할랄"><input type="checkbox" />할랄</label>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- 알레르기 -->
+      <div class="field">
+        <label>알레르기 재료</label>
+        <div class="tag-input-wrap" id="allergy-wrap">
+          <input type="text" id="allergy-input" placeholder="새우, 땅콩... 입력 후 Enter" />
+        </div>
+        <p class="hint">알레르기 재료는 레시피에서 절대 포함되지 않습니다.</p>
+      </div>
+
+      <!-- 기피 재료 -->
+      <div class="field">
+        <label>기피 재료</label>
+        <div class="tag-input-wrap" id="disliked-wrap">
+          <input type="text" id="disliked-input" placeholder="고수, 피망... 입력 후 Enter" />
+        </div>
+        <p class="hint">가능하면 제외하도록 레시피를 생성합니다.</p>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- 기본 설정 -->
+      <div class="two-col">
+        <div class="field">
+          <label for="cook-time">기본 조리 시간</label>
+          <select id="cook-time">
+            <option value="15">15분 이하</option>
+            <option value="30" selected>30분 이하</option>
+            <option value="60">60분 이하</option>
+            <option value="999">제한 없음</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="servings">기본 인분 수</label>
+          <select id="servings">
+            <option value="1">1인분</option>
+            <option value="2" selected>2인분</option>
+            <option value="4">4인분</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-save" id="save-btn">저장하기</button>
+        <button class="btn-reset" id="reset-btn">초기화</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" aria-live="polite"></div>
+
+  <script>
+
+    // ── 유틸 ──────────────────────────────────
+    function loadProfile() {
+      try { return JSON.parse(localStorage.getItem("userProfile") || "null"); }
+      catch { return null; }
+    }
+    function saveProfile(p) {
+      localStorage.setItem("userProfile", JSON.stringify(p));
+    }
+
+    // ── 태그 입력 컴포넌트 ─────────────────────
+    function makeTagInput(wrapId, inputId, chipClass = "") {
+      const wrap = document.getElementById(wrapId);
+      const input = document.getElementById(inputId);
+      const tags = [];
+
+      function render() {
+        wrap.querySelectorAll(".tag-chip").forEach(el => el.remove());
+        tags.forEach((t, i) => {
+          const chip = document.createElement("span");
+          chip.className = "tag-chip" + (chipClass ? " " + chipClass : "");
+          chip.innerHTML = `${t}<button data-i="${i}">✕</button>`;
+          chip.querySelector("button").addEventListener("click", () => {
+            tags.splice(i, 1); render();
+          });
+          wrap.insertBefore(chip, input);
+        });
+      }
+
+      input.addEventListener("keydown", e => {
+        if ((e.key === "Enter" || e.key === ",") && input.value.trim()) {
+          e.preventDefault();
+          const val = input.value.trim().replace(/,$/, "");
+          if (val && !tags.includes(val)) { tags.push(val); render(); }
+          input.value = "";
+        }
+        if (e.key === "Backspace" && !input.value && tags.length) {
+          tags.pop(); render();
+        }
+      });
+      wrap.addEventListener("click", () => input.focus());
+
+      return {
+        getTags: () => [...tags],
+        setTags: (arr) => { tags.length = 0; tags.push(...arr); render(); },
+      };
+    }
+
+    const allergyCtrl = makeTagInput("allergy-wrap", "allergy-input");
+    const dislikedCtrl = makeTagInput("disliked-wrap", "disliked-input", "disliked");
+
+    // ── 식단 체크박스 ──────────────────────────
+    document.querySelectorAll("#dietary-group label").forEach(lbl => {
+      lbl.addEventListener("click", (e) => { e.preventDefault(); lbl.classList.toggle("on"); });
+    });
+    function getDietary() {
+      return [...document.querySelectorAll("#dietary-group label.on")]
+        .map(l => l.dataset.val);
+    }
+    function setDietary(arr) {
+      document.querySelectorAll("#dietary-group label").forEach(lbl => {
+        lbl.classList.toggle("on", arr.includes(lbl.dataset.val));
+      });
+    }
+
+    // ── 프로필 불러오기 ────────────────────────
+    const profile = loadProfile();
+    if (profile) {
+      document.getElementById("name").value = profile.name || "";
+      setDietary(profile.dietary_preferences || []);
+      allergyCtrl.setTags(profile.allergies || []);
+      dislikedCtrl.setTags(profile.disliked_ingredients || []);
+      const ct = document.getElementById("cook-time");
+      if (profile.preferred_cook_time) ct.value = profile.preferred_cook_time;
+      const sv = document.getElementById("servings");
+      if (profile.servings) sv.value = profile.servings;
+    }
+
+    // ── 저장 ──────────────────────────────────
+    document.getElementById("save-btn").addEventListener("click", () => {
+      const nameEl = document.getElementById("name");
+      const nameErr = document.getElementById("name-err");
+      if (!nameEl.value.trim()) {
+        nameEl.classList.add("error");
+        nameErr.style.display = "block";
+        nameEl.focus();
+        return;
+      }
+      nameEl.classList.remove("error");
+      nameErr.style.display = "none";
+
+      const existing = loadProfile();
+      const now = new Date().toISOString();
+      const p = {
+        id: existing?.id || crypto.randomUUID(),
+        name: nameEl.value.trim(),
+        dietary_preferences: getDietary(),
+        allergies: allergyCtrl.getTags(),
+        disliked_ingredients: dislikedCtrl.getTags(),
+        preferred_cook_time: parseInt(document.getElementById("cook-time").value),
+        servings: parseInt(document.getElementById("servings").value),
+        created_at: existing?.created_at || now,
+        updated_at: now,
+      };
+      saveProfile(p);
+      showToast("프로필이 저장되었습니다.");
+    });
+
+    // ── 초기화 ─────────────────────────────────
+    document.getElementById("reset-btn").addEventListener("click", () => {
+      if (!confirm("프로필 정보를 모두 초기화할까요?")) return;
+      localStorage.removeItem("userProfile");
+      document.getElementById("name").value = "";
+      setDietary([]);
+      allergyCtrl.setTags([]);
+      dislikedCtrl.setTags([]);
+      document.getElementById("cook-time").value = "30";
+      document.getElementById("servings").value = "2";
+      showToast("초기화되었습니다.");
+    });
+
+    // ── 토스트 ────────────────────────────────
+    const toastEl = document.getElementById("toast");
+    let timer;
+    function showToast(msg) {
+      toastEl.textContent = msg;
+      toastEl.classList.add("show");
+      clearTimeout(timer);
+      timer = setTimeout(() => toastEl.classList.remove("show"), 2500);
+    }
+  </script>
+</body>
+</html>

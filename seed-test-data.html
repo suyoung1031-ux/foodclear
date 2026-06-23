@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>테스트 데이터 주입</title>
+  <style>
+    body { font-family: sans-serif; background: #f0f4f8; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .box { background: #fff; padding: 32px; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,.08); max-width: 460px; width: 100%; }
+    h2 { margin-bottom: 16px; }
+    button { display: block; width: 100%; padding: 12px; margin-bottom: 10px; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+    .btn-seed { background: #4299e1; color: #fff; }
+    .btn-seed:hover { background: #3182ce; }
+    .btn-clear { background: #fff5f5; color: #e53e3e; border: 1px solid #fc8181; }
+    .btn-go { background: #48bb78; color: #fff; }
+    .log { margin-top: 12px; padding: 10px; background: #f7fafc; border-radius: 6px; font-size: .82rem; color: #4a5568; max-height: 160px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>🧪 테스트 데이터 주입</h2>
+    <button class="btn-seed" id="seed">샘플 프로필 + 레시피 주입</button>
+    <button class="btn-clear" id="clear">전체 데이터 삭제</button>
+    <button class="btn-go" onclick="location.href='/step3.html'">보관함 열기 →</button>
+    <div class="log" id="log"></div>
+  </div>
+  <script>
+    function log(msg) {
+      const el = document.getElementById("log");
+      el.innerHTML += msg + "<br/>";
+      el.scrollTop = el.scrollHeight;
+    }
+
+    document.getElementById("seed").addEventListener("click", () => {
+      // 프로필
+      const profile = {
+        id: crypto.randomUUID(),
+        name: "테스트 사용자",
+        dietary_preferences: ["채식"],
+        allergies: ["새우", "땅콩"],
+        disliked_ingredients: ["고수"],
+        preferred_cook_time: 30,
+        servings: 2,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      localStorage.setItem("userProfile", JSON.stringify(profile));
+      log("✓ 프로필 저장: " + profile.name);
+
+      // 레시피 3개
+      const recipes = [
+        {
+          id: "saved_" + Date.now(),
+          recipe: {
+            name: "달걀 채소볶음",
+            description: "냉장고 재료로 만드는 간단한 영양 볶음",
+            cook_time_minutes: 15,
+            servings: 2,
+            difficulty: "쉬움",
+            ingredients: [
+              { name: "달걀", amount: "3개", available: true },
+              { name: "당근", amount: "1/2개", available: true },
+              { name: "양파", amount: "1/2개", available: true },
+              { name: "간장", amount: "1큰술", available: true },
+              { name: "식용유", amount: "1큰술", available: false },
+            ],
+            steps: [
+              { step: 1, description: "당근과 양파를 얇게 채썬다." },
+              { step: 2, description: "팬에 기름을 두르고 채소를 볶는다." },
+              { step: 3, description: "달걀을 풀어 넣고 간장으로 간한다." },
+            ],
+            tips: "달걀을 넣기 전 팬을 충분히 달구면 더 맛있어요.",
+            nutrition: { calories: 280, protein: "16g", carbs: "10g", fat: "18g" },
+          },
+          source_ingredients: ["달걀", "당근", "양파", "간장"],
+          memo: "다음엔 간장 줄이기",
+          saved_at: new Date(Date.now() - 86400000).toISOString(),
+        },
+        {
+          id: "saved_" + (Date.now() + 1),
+          recipe: {
+            name: "우유 당근 수프",
+            description: "부드러운 우유 베이스에 당근을 갈아 만든 따뜻한 수프",
+            cook_time_minutes: 25,
+            servings: 2,
+            difficulty: "보통",
+            ingredients: [
+              { name: "우유", amount: "300ml", available: true },
+              { name: "당근", amount: "1개", available: true },
+              { name: "양파", amount: "1/4개", available: true },
+              { name: "소금", amount: "약간", available: false },
+            ],
+            steps: [
+              { step: 1, description: "당근을 깍둑썰기한다." },
+              { step: 2, description: "냄비에 볶은 뒤 물을 붓고 끓인다." },
+              { step: 3, description: "블렌더로 갈아 우유를 넣고 끓인다." },
+            ],
+            tips: "우유를 약한 불에서 가열하면 풍미가 살아납니다.",
+            nutrition: { calories: 210, protein: "8g", carbs: "22g", fat: "9g" },
+          },
+          source_ingredients: ["우유", "당근", "양파"],
+          memo: "",
+          saved_at: new Date(Date.now() - 3600000).toISOString(),
+        },
+        {
+          id: "saved_" + (Date.now() + 2),
+          recipe: {
+            name: "계란말이",
+            description: "부드러운 계란말이에 당근과 양파가 들어간 반찬",
+            cook_time_minutes: 20,
+            servings: 2,
+            difficulty: "쉬움",
+            ingredients: [
+              { name: "달걀", amount: "5개", available: true },
+              { name: "당근", amount: "1/2개", available: true },
+              { name: "참기름", amount: "1작은술", available: true },
+            ],
+            steps: [
+              { step: 1, description: "달걀을 풀어 채소를 섞는다." },
+              { step: 2, description: "얇게 부쳐 말아가며 굽는다." },
+            ],
+            tips: "",
+            nutrition: { calories: 320, protein: "18g", carbs: "14g", fat: "22g" },
+          },
+          source_ingredients: ["달걀", "당근", "참기름"],
+          memo: "",
+          saved_at: new Date().toISOString(),
+        },
+      ];
+      localStorage.setItem("savedRecipes", JSON.stringify(recipes));
+      log("✓ 레시피 " + recipes.length + "개 저장 완료");
+      log("→ 보관함에서 확인하세요.");
+    });
+
+    document.getElementById("clear").addEventListener("click", () => {
+      localStorage.removeItem("userProfile");
+      localStorage.removeItem("savedRecipes");
+      log("✓ 전체 데이터 삭제 완료");
+    });
+  </script>
+</body>
+</html>

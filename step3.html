@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>레시피 보관함</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      padding: 0 0 60px;
+    }
+
+    /* ── 네비 ── */
+    .nav {
+      background: #fff;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      min-height: 52px;
+    }
+    .nav-brand { font-weight: 700; color: #1a202c; margin-right: 24px; font-size: 1rem; text-decoration: none; }
+    .nav a {
+      padding: 0 14px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      color: #718096;
+      text-decoration: none;
+      font-size: 0.9rem;
+      border-bottom: 2px solid transparent;
+      transition: color 0.15s;
+    }
+    .nav a:hover { color: #2d3748; }
+    .nav a.active { color: #4299e1; border-bottom-color: #4299e1; font-weight: 600; }
+    .nav-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+    .nav-username { font-size: 0.875rem; color: #4a5568; }
+    .nav-logout { padding: 6px 14px; background: #e2e8f0; border: none; border-radius: 6px; font-size: 0.85rem; cursor: pointer; color: #2d3748; }
+    .nav-logout:hover { background: #cbd5e0; }
+    @media (max-width: 768px) {
+      .nav a { font-size: 0.8rem; padding: 0 8px; }
+    }
+    @media (max-width: 480px) {
+      .nav-username { display: none; }
+      .nav-brand { margin-right: 12px; }
+    }
+
+    .container { max-width: 760px; margin: 0 auto; padding: 32px 16px; }
+
+    /* ── 헤더 ── */
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .page-header h1 { font-size: 1.4rem; font-weight: 700; color: #1a202c; }
+    .count-badge {
+      background: #ebf8ff;
+      color: #2b6cb0;
+      border: 1px solid #bee3f8;
+      border-radius: 20px;
+      padding: 3px 12px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    /* ── 툴바 ── */
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .search-wrap {
+      flex: 1;
+      min-width: 180px;
+      position: relative;
+    }
+    .search-wrap input {
+      width: 100%;
+      padding: 10px 14px 10px 38px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      outline: none;
+      background: #fff;
+    }
+    .search-wrap input:focus { border-color: #4299e1; }
+    .search-icon {
+      position: absolute;
+      left: 12px; top: 50%;
+      transform: translateY(-50%);
+      color: #a0aec0;
+      font-size: 0.9rem;
+    }
+    .toolbar select {
+      padding: 10px 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      color: #4a5568;
+      background: #fff;
+      cursor: pointer;
+      outline: none;
+    }
+    .view-toggle {
+      display: flex;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .view-toggle button {
+      padding: 9px 13px;
+      border: none;
+      background: #fff;
+      color: #718096;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: all 0.15s;
+    }
+    .view-toggle button.active { background: #4299e1; color: #fff; }
+
+    /* ── 일괄 삭제 ── */
+    .bulk-bar {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding: 10px 16px;
+      background: #fff5f5;
+      border: 1px solid #fc8181;
+      border-radius: 8px;
+    }
+    .bulk-bar.show { display: flex; }
+    .bulk-bar span { font-size: 0.9rem; color: #c53030; flex: 1; }
+    .bulk-del-btn {
+      padding: 7px 16px;
+      background: #e53e3e;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .bulk-cancel-btn {
+      padding: 7px 16px;
+      background: #fff;
+      color: #718096;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+
+    /* ── 빈 상태 ── */
+    .empty {
+      text-align: center;
+      padding: 80px 20px;
+      color: #a0aec0;
+    }
+    .empty .icon { font-size: 3rem; margin-bottom: 16px; }
+    .empty p { font-size: 1rem; margin-bottom: 20px; }
+    .empty a {
+      display: inline-block;
+      padding: 10px 24px;
+      background: #4299e1;
+      color: #fff;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    /* ── 그리드 ── */
+    #recipe-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    #recipe-list.list-view {
+      grid-template-columns: 1fr;
+    }
+
+    /* ── 카드 ── */
+    .recipe-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 18px;
+      position: relative;
+      transition: all 0.15s;
+    }
+    .recipe-card:hover { border-color: #bee3f8; box-shadow: 0 4px 16px rgba(66,153,225,.1); }
+    .recipe-card.selected { border-color: #fc8181; background: #fff5f5; }
+    .list-view .recipe-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 18px;
+    }
+
+    .card-check {
+      position: absolute;
+      top: 12px; left: 12px;
+      display: none;
+    }
+    .selecting .card-check { display: block; }
+    .card-check input { width: 16px; height: 16px; cursor: pointer; accent-color: #e53e3e; }
+
+    .card-body { flex: 1; min-width: 0; }
+    .card-name {
+      font-size: 0.975rem;
+      font-weight: 700;
+      color: #1a202c;
+      margin-bottom: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .list-view .card-name { margin-bottom: 0; }
+    .card-desc {
+      font-size: 0.82rem;
+      color: #718096;
+      line-height: 1.5;
+      margin-bottom: 10px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .list-view .card-desc { display: none; }
+    .card-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+    .list-view .card-meta { margin-bottom: 0; }
+    .meta-badge {
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 500;
+    }
+    .badge-time { background: #ebf8ff; color: #2b6cb0; }
+    .badge-easy { background: #f0fff4; color: #276749; }
+    .badge-medium { background: #fffaf0; color: #7b341e; }
+    .badge-hard { background: #fff5f5; color: #c53030; }
+
+    .card-date { font-size: 0.75rem; color: #a0aec0; margin-bottom: 12px; }
+    .list-view .card-date { margin-bottom: 0; }
+
+    .card-memo {
+      font-size: 0.8rem;
+      color: #744210;
+      background: #fffaf0;
+      border: 1px solid #fbd38d;
+      border-radius: 6px;
+      padding: 5px 8px;
+      margin-bottom: 12px;
+    }
+    .list-view .card-memo { display: none; }
+
+    .card-actions { display: flex; gap: 8px; }
+    .list-view .card-actions { flex-shrink: 0; }
+    .btn-view {
+      flex: 1;
+      padding: 7px 0;
+      background: #ebf8ff;
+      color: #2b6cb0;
+      border: 1px solid #bee3f8;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-view:hover { background: #4299e1; color: #fff; border-color: #4299e1; }
+    .btn-del {
+      padding: 7px 10px;
+      background: #fff;
+      color: #e53e3e;
+      border: 1px solid #fc8181;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-del:hover { background: #e53e3e; color: #fff; }
+
+    /* ── 상세 모달 ── */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.5);
+      z-index: 100;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 40px 16px;
+      overflow-y: auto;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: #fff;
+      border-radius: 16px;
+      max-width: 560px;
+      width: 100%;
+      padding: 32px;
+      position: relative;
+    }
+    .modal-close {
+      position: absolute;
+      top: 14px; right: 14px;
+      background: #f7fafc;
+      border: none;
+      border-radius: 50%;
+      width: 30px; height: 30px;
+      font-size: 1rem;
+      cursor: pointer;
+      color: #718096;
+    }
+    .modal-close:hover { background: #fed7d7; color: #c53030; }
+    .modal h2 { font-size: 1.25rem; font-weight: 700; color: #1a202c; margin-bottom: 6px; }
+    .modal-desc { font-size: 0.9rem; color: #718096; margin-bottom: 14px; }
+    .modal-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+    .modal-section { margin-bottom: 20px; }
+    .modal-section h3 {
+      font-size: 0.82rem; font-weight: 700; color: #4a5568;
+      text-transform: uppercase; letter-spacing: .05em;
+      margin-bottom: 10px;
+      padding-bottom: 6px; border-bottom: 1px solid #e2e8f0;
+    }
+    .ing-list { list-style: none; }
+    .ing-list li {
+      display: flex; justify-content: space-between;
+      padding: 5px 0; font-size: 0.875rem;
+      border-bottom: 1px dashed #f0f4f8;
+    }
+    .ing-list li:last-child { border-bottom: none; }
+    .ing-na { color: #fc8181; }
+    .badge-na {
+      font-size: 0.7rem; background: #fff5f5; color: #c53030;
+      border: 1px solid #fc8181; border-radius: 4px;
+      padding: 1px 5px; margin-left: 4px;
+    }
+    .steps-list { list-style: none; }
+    .steps-list li {
+      display: flex; gap: 12px;
+      padding: 8px 0; font-size: 0.875rem; color: #2d3748; line-height: 1.6;
+      border-bottom: 1px dashed #f0f4f8;
+    }
+    .steps-list li:last-child { border-bottom: none; }
+    .step-num {
+      flex-shrink: 0; width: 24px; height: 24px;
+      background: #48bb78; color: #fff; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; font-weight: 700;
+    }
+    .tips-box {
+      background: #fffaf0; border: 1px solid #fbd38d;
+      border-radius: 8px; padding: 10px 12px;
+      font-size: 0.85rem; color: #744210; line-height: 1.6;
+    }
+    .nutrition-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
+    .nutrition-item { text-align: center; padding: 8px; background: #f7fafc; border-radius: 8px; }
+    .nutrition-value { font-size: .95rem; font-weight: 700; color: #2d3748; }
+    .nutrition-label { font-size: .72rem; color: #718096; margin-top: 2px; }
+
+    .modal-memo {
+      margin-top: 14px;
+      padding: 10px;
+      background: #fffaf0;
+      border: 1px solid #fbd38d;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      color: #744210;
+    }
+    .modal-memo strong { display: block; margin-bottom: 4px; font-size: 0.78rem; color: #a0aec0; }
+
+    /* ── 선택 모드 진입 버튼 ── */
+    .select-mode-btn {
+      padding: 8px 14px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      color: #718096;
+      cursor: pointer;
+    }
+    .select-mode-btn:hover { border-color: #fc8181; color: #e53e3e; }
+  </style>
+</head>
+<body>
+
+  <nav class="nav">
+    <a href="index.html" class="nav-brand">🧊 냉장고 셰프</a>
+    <a href="index.html">재료 인식</a>
+    <a href="step2.html">레시피 추천</a>
+    <a href="step3.html" class="active">보관함</a>
+    <a href="profile.html">내 프로필</a>
+  </nav>
+
+  <div class="container">
+    <div class="page-header">
+      <h1>📚 레시피 보관함</h1>
+      <span class="count-badge" id="count-badge">0개</span>
+    </div>
+
+    <!-- 툴바 -->
+    <div class="toolbar">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-input" placeholder="레시피명 또는 재료로 검색..." />
+      </div>
+      <select id="sort-select">
+        <option value="newest">최신순</option>
+        <option value="cook_time">조리시간 짧은순</option>
+        <option value="name">이름 가나다순</option>
+      </select>
+      <div class="view-toggle">
+        <button id="grid-btn" class="active" title="그리드">⊞</button>
+        <button id="list-btn" title="리스트">☰</button>
+      </div>
+      <button class="select-mode-btn" id="select-mode-btn">선택 삭제</button>
+    </div>
+
+    <!-- 일괄 삭제 바 -->
+    <div class="bulk-bar" id="bulk-bar">
+      <span id="bulk-msg">0개 선택됨</span>
+      <button class="bulk-cancel-btn" id="bulk-cancel">취소</button>
+      <button class="bulk-del-btn" id="bulk-del">삭제</button>
+    </div>
+
+    <!-- 레시피 목록 -->
+    <div id="recipe-list"></div>
+  </div>
+
+  <!-- 상세 모달 -->
+  <div class="modal-backdrop" id="modal-backdrop">
+    <div class="modal">
+      <button class="modal-close" id="modal-close">✕</button>
+      <h2 id="m-name"></h2>
+      <p class="modal-desc" id="m-desc"></p>
+      <div class="modal-meta" id="m-meta"></div>
+      <div class="modal-section">
+        <h3>재료</h3>
+        <ul class="ing-list" id="m-ings"></ul>
+      </div>
+      <div class="modal-section">
+        <h3>조리 순서</h3>
+        <ul class="steps-list" id="m-steps"></ul>
+      </div>
+      <div class="modal-section" id="m-tips-wrap" style="display:none">
+        <h3>요리 팁</h3>
+        <div class="tips-box" id="m-tips"></div>
+      </div>
+      <div class="modal-section">
+        <h3>영양 정보 (1인분)</h3>
+        <div class="nutrition-grid" id="m-nutrition"></div>
+      </div>
+      <div id="m-memo-wrap" style="display:none">
+        <div class="modal-memo">
+          <strong>내 메모</strong>
+          <span id="m-memo"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+
+    // ── 데이터 ────────────────────────────────
+    function load() {
+      try { return JSON.parse(localStorage.getItem("savedRecipes") || "[]"); }
+      catch { return []; }
+    }
+    function save(arr) {
+      localStorage.setItem("savedRecipes", JSON.stringify(arr));
+    }
+
+    let allRecipes = load();
+    let filtered = [];
+    let selecting = false;
+    let selectedIds = new Set();
+    let viewMode = "grid"; // grid | list
+
+    // ── 필터 & 정렬 ───────────────────────────
+    const searchInput = document.getElementById("search-input");
+    const sortSelect = document.getElementById("sort-select");
+
+    function applyFilter() {
+      const q = searchInput.value.trim().toLowerCase();
+      const sort = sortSelect.value;
+
+      filtered = allRecipes.filter(entry => {
+        if (!q) return true;
+        const r = entry.recipe;
+        const inName = r.name.toLowerCase().includes(q);
+        const inIng = (r.ingredients || []).some(i => i.name.toLowerCase().includes(q));
+        const inSrc = (entry.source_ingredients || []).some(s => s.toLowerCase().includes(q));
+        return inName || inIng || inSrc;
+      });
+
+      if (sort === "newest") {
+        filtered.sort((a, b) => new Date(b.saved_at) - new Date(a.saved_at));
+      } else if (sort === "cook_time") {
+        filtered.sort((a, b) => a.recipe.cook_time_minutes - b.recipe.cook_time_minutes);
+      } else {
+        filtered.sort((a, b) => a.recipe.name.localeCompare(b.recipe.name, "ko"));
+      }
+
+      renderList();
+    }
+
+    searchInput.addEventListener("input", applyFilter);
+    sortSelect.addEventListener("change", applyFilter);
+
+    // ── 뷰 토글 ──────────────────────────────
+    const gridBtn = document.getElementById("grid-btn");
+    const listBtn = document.getElementById("list-btn");
+    const recipeList = document.getElementById("recipe-list");
+
+    gridBtn.addEventListener("click", () => {
+      viewMode = "grid";
+      gridBtn.classList.add("active");
+      listBtn.classList.remove("active");
+      recipeList.classList.remove("list-view");
+    });
+    listBtn.addEventListener("click", () => {
+      viewMode = "list";
+      listBtn.classList.add("active");
+      gridBtn.classList.remove("active");
+      recipeList.classList.add("list-view");
+    });
+
+    // ── 선택 모드 ─────────────────────────────
+    const selectModeBtn = document.getElementById("select-mode-btn");
+    const bulkBar = document.getElementById("bulk-bar");
+    const bulkMsg = document.getElementById("bulk-msg");
+    const bulkCancel = document.getElementById("bulk-cancel");
+    const bulkDel = document.getElementById("bulk-del");
+
+    selectModeBtn.addEventListener("click", () => {
+      selecting = true;
+      selectedIds.clear();
+      selectModeBtn.style.display = "none";
+      bulkBar.classList.add("show");
+      document.querySelectorAll(".recipe-card").forEach(c => c.classList.add("selecting"));
+      document.querySelectorAll(".card-check").forEach(c => c.style.display = "block");
+      updateBulkMsg();
+    });
+
+    bulkCancel.addEventListener("click", exitSelectMode);
+
+    function exitSelectMode() {
+      selecting = false;
+      selectedIds.clear();
+      selectModeBtn.style.display = "";
+      bulkBar.classList.remove("show");
+      document.querySelectorAll(".recipe-card").forEach(c => {
+        c.classList.remove("selecting", "selected");
+      });
+      document.querySelectorAll(".card-check").forEach(c => c.style.display = "none");
+      document.querySelectorAll(".card-check input").forEach(cb => cb.checked = false);
+    }
+
+    function updateBulkMsg() {
+      bulkMsg.textContent = `${selectedIds.size}개 선택됨`;
+    }
+
+    bulkDel.addEventListener("click", () => {
+      if (selectedIds.size === 0) return;
+      if (!confirm(`선택한 ${selectedIds.size}개의 레시피를 삭제할까요?`)) return;
+      allRecipes = allRecipes.filter(e => !selectedIds.has(e.id));
+      save(allRecipes);
+      exitSelectMode();
+      applyFilter();
+    });
+
+    // ── 렌더링 ────────────────────────────────
+    const diffClass = d => d === "쉬움" ? "badge-easy" : d === "어려움" ? "badge-hard" : "badge-medium";
+
+    function renderList() {
+      const countBadge = document.getElementById("count-badge");
+      countBadge.textContent = `${allRecipes.length}개`;
+
+      if (filtered.length === 0) {
+        const q = searchInput.value.trim();
+        recipeList.innerHTML = `
+          <div class="empty" style="grid-column:1/-1">
+            <div class="icon">${allRecipes.length === 0 ? "📭" : "🔍"}</div>
+            <p>${allRecipes.length === 0
+              ? "저장된 레시피가 없습니다."
+              : `"${q}"에 해당하는 레시피가 없습니다.`}</p>
+            ${allRecipes.length === 0
+              ? '<a href="step2.html">레시피 추천받기 →</a>'
+              : ""}
+          </div>`;
+        return;
+      }
+
+      recipeList.innerHTML = filtered.map(entry => {
+        const r = entry.recipe;
+        const date = new Date(entry.saved_at).toLocaleDateString("ko-KR");
+        const memoHtml = entry.memo
+          ? `<div class="card-memo">💬 ${entry.memo}</div>`
+          : "";
+        return `
+          <div class="recipe-card${selecting ? " selecting" : ""}" data-id="${entry.id}">
+            <div class="card-check" ${selecting ? "" : 'style="display:none"'}>
+              <input type="checkbox" data-id="${entry.id}" />
+            </div>
+            <div class="card-body">
+              <div class="card-name">${r.name}</div>
+              <div class="card-desc">${r.description || ""}</div>
+              <div class="card-meta">
+                <span class="meta-badge badge-time">⏱ ${r.cook_time_minutes}분</span>
+                <span class="meta-badge ${diffClass(r.difficulty)}">${r.difficulty}</span>
+              </div>
+              <div class="card-date">${date} 저장</div>
+              ${memoHtml}
+              <div class="card-actions">
+                <button class="btn-view" data-id="${entry.id}">보기</button>
+                <button class="btn-del" data-id="${entry.id}">삭제</button>
+              </div>
+            </div>
+          </div>`;
+      }).join("");
+
+      // 이벤트 바인딩
+      recipeList.querySelectorAll(".card-check input").forEach(cb => {
+        cb.addEventListener("change", () => {
+          const id = cb.dataset.id;
+          const card = cb.closest(".recipe-card");
+          if (cb.checked) { selectedIds.add(id); card.classList.add("selected"); }
+          else { selectedIds.delete(id); card.classList.remove("selected"); }
+          updateBulkMsg();
+        });
+      });
+
+      recipeList.querySelectorAll(".btn-view").forEach(btn => {
+        btn.addEventListener("click", () => {
+          if (selecting) return;
+          const entry = allRecipes.find(e => e.id === btn.dataset.id);
+          if (entry) openModal(entry);
+        });
+      });
+
+      recipeList.querySelectorAll(".btn-del").forEach(btn => {
+        btn.addEventListener("click", () => {
+          if (selecting) return;
+          const entry = allRecipes.find(e => e.id === btn.dataset.id);
+          if (!entry) return;
+          if (!confirm(`"${entry.recipe.name}"을 삭제할까요?`)) return;
+          allRecipes = allRecipes.filter(e => e.id !== btn.dataset.id);
+          save(allRecipes);
+          applyFilter();
+        });
+      });
+
+      // 카드 전체 클릭으로 선택
+      recipeList.querySelectorAll(".recipe-card").forEach(card => {
+        card.addEventListener("click", e => {
+          if (!selecting) return;
+          const cb = card.querySelector("input[type=checkbox]");
+          if (e.target === cb) return;
+          cb.checked = !cb.checked;
+          cb.dispatchEvent(new Event("change"));
+        });
+      });
+    }
+
+    // ── 상세 모달 ─────────────────────────────
+    const backdrop = document.getElementById("modal-backdrop");
+    document.getElementById("modal-close").addEventListener("click", () => backdrop.classList.remove("open"));
+    backdrop.addEventListener("click", e => { if (e.target === backdrop) backdrop.classList.remove("open"); });
+    document.addEventListener("keydown", e => { if (e.key === "Escape") backdrop.classList.remove("open"); });
+
+    function openModal(entry) {
+      const r = entry.recipe;
+      document.getElementById("m-name").textContent = r.name;
+      document.getElementById("m-desc").textContent = r.description || "";
+      document.getElementById("m-meta").innerHTML = `
+        <span class="meta-badge badge-time">⏱ ${r.cook_time_minutes}분</span>
+        <span class="meta-badge ${diffClass(r.difficulty)}">${r.difficulty}</span>
+        <span class="meta-badge" style="background:#faf5ff;color:#553c9a">${r.servings}인분</span>
+      `;
+      document.getElementById("m-ings").innerHTML = (r.ingredients || []).map(ing => `
+        <li>
+          <span class="${ing.available === false ? "ing-na" : ""}">
+            ${ing.name}${ing.available === false ? '<span class="badge-na">없음</span>' : ""}
+          </span>
+          <span style="color:#718096">${ing.amount}</span>
+        </li>`).join("");
+      document.getElementById("m-steps").innerHTML = (r.steps || []).map(s => `
+        <li><div class="step-num">${s.step}</div><div>${s.description}</div></li>`).join("");
+
+      const tipsWrap = document.getElementById("m-tips-wrap");
+      if (r.tips) {
+        document.getElementById("m-tips").textContent = r.tips;
+        tipsWrap.style.display = "block";
+      } else { tipsWrap.style.display = "none"; }
+
+      const n = r.nutrition || {};
+      document.getElementById("m-nutrition").innerHTML = [
+        [n.calories ?? "-", "칼로리(kcal)"],
+        [n.protein ?? "-", "단백질"],
+        [n.carbs ?? "-", "탄수화물"],
+        [n.fat ?? "-", "지방"],
+      ].map(([v, l]) => `
+        <div class="nutrition-item">
+          <div class="nutrition-value">${v}</div>
+          <div class="nutrition-label">${l}</div>
+        </div>`).join("");
+
+      const memoWrap = document.getElementById("m-memo-wrap");
+      if (entry.memo) {
+        document.getElementById("m-memo").textContent = entry.memo;
+        memoWrap.style.display = "block";
+      } else { memoWrap.style.display = "none"; }
+
+      backdrop.classList.add("open");
+    }
+
+    // ── 초기 렌더 ─────────────────────────────
+    applyFilter();
+  </script>
+</body>
+</html>

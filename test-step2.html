@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>Step 2 테스트 진입</title>
+  <style>
+    body { font-family: sans-serif; background: #f0f4f8; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .box { background: #fff; padding: 32px; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,.08); max-width: 480px; width: 100%; }
+    h2 { margin-bottom: 16px; color: #1a202c; }
+    label { font-size: .9rem; color: #4a5568; display: block; margin-bottom: 6px; }
+    textarea { width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: .9rem; resize: vertical; }
+    button { margin-top: 16px; width: 100%; padding: 13px; background: #f6ad55; border: none; border-radius: 10px; font-size: 1rem; font-weight: 700; color: #7b341e; cursor: pointer; }
+    button:hover { background: #ed8936; color: #fff; }
+    p { font-size: .85rem; color: #718096; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>🧪 Step 2 테스트</h2>
+    <label>재료 목록 (쉼표로 구분)</label>
+    <textarea id="ing" rows="3">달걀, 우유, 당근, 양파, 간장, 참기름</textarea>
+    <button id="go">Step 2로 이동 →</button>
+    <p>재료를 sessionStorage에 저장한 후 step2.html로 이동합니다.</p>
+  </div>
+  <script>
+    document.getElementById("go").addEventListener("click", () => {
+      const raw = document.getElementById("ing").value;
+      const list = raw.split(",").map(s => s.trim()).filter(Boolean);
+      sessionStorage.setItem("ingredients", JSON.stringify(list));
+      window.location.href = "/step2.html";
+    });
+  </script>
+</body>
+</html>
