@@ -373,6 +373,8 @@
 
   <script>
 
+    const API_BASE = "https://foodclear-h0e4.onrender.com";
+
     const uploadZone = document.getElementById("upload-zone");
     const fileInput = document.getElementById("file-input");
     const previewWrap = document.getElementById("preview-wrap");
@@ -516,7 +518,7 @@
       try {
         const mimeType = currentFile.type;
 
-        const res = await fetch("/api/analyze", {
+        const res = await fetch(`${API_BASE}/api/analyze`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
