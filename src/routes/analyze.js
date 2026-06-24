@@ -93,7 +93,8 @@ export async function analyzeImage(req, res) {
     const base64 = image.startsWith("data:") ? image.split(",")[1] : image;
 
     const data = await callOpenAI(base64, mimeType);
-    const content = data.choices[0].message.content;
+    const content = data?.choices?.[0]?.message?.content;
+    if (!content) throw new Error("AI가 응답을 반환하지 않았습니다. 잠시 후 다시 시도해주세요.");
     console.log("[analyze] 모델 원본 응답:", content.slice(0, 300));
 
     let parsed;
@@ -137,6 +138,6 @@ export async function analyzeImage(req, res) {
       });
     }
 
-    res.status(500).json({ success: false, error: err.message });
+    res.status(500).json({ success: false, error: "죄송합니다. 사진 분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요." });
   }
 }

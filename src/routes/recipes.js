@@ -8,12 +8,13 @@ const MAX_CACHE_SIZE = 200; // 최대 캐시 항목 수
 const cache = new Map(); // key → { data, expiresAt }
 
 // 5분마다 만료된 엔트리 정리 (메모리 누수 방지)
+// .unref() — 이 타이머만 남아 있어도 Node.js 프로세스가 종료될 수 있게 허용
 setInterval(() => {
   const now = Date.now();
   for (const [key, entry] of cache) {
     if (now > entry.expiresAt) cache.delete(key);
   }
-}, 5 * 60 * 1000);
+}, 5 * 60 * 1000).unref();
 
 function cacheKey(ingredients, options) {
   return JSON.stringify({ ingredients: [...ingredients].sort(), options });
@@ -168,13 +169,20 @@ export async function generateRecipes(req, res) {
       }),
     });
 
+    if (apiRes.status === 429) {
+      const retryAfter = parseInt(apiRes.headers.get("retry-after") || "60", 10);
+      console.log(`[recipes] 429 rate limit, retry-after: ${retryAfter}s`);
+      throw Object.assign(new Error("rate_limit"), { retryAfter });
+    }
+
     if (!apiRes.ok) {
       const text = await apiRes.text();
       throw new Error(`OpenAI HTTP ${apiRes.status}: ${text}`);
     }
 
     const data = await apiRes.json();
-    const content = data.choices[0].message.content;
+    const content = data?.choices?.[0]?.message?.content;
+    if (!content) throw new Error("AI가 응답을 반환하지 않았습니다. 잠시 후 다시 시도해주세요.");
 
     let parsed;
     try {
@@ -212,7 +220,16 @@ export async function generateRecipes(req, res) {
     setCache(key, parsed);
     res.json({ success: true, cached: false, ...parsed });
   } catch (err) {
-    console.error("recipes error:", err.message);
-    res.status(500).json({ success: false, error: err.message });
+    console.error("[recipes] 오류:", err.message);
+
+    if (err.message === "rate_limit") {
+      return res.status(429).json({
+        success: false,
+        error: "AI 서비스 사용량 한도에 도달했습니다.",
+        retry_after: err.retryAfter || 60,
+      });
+    }
+
+    res.status(500).json({ success: false, error: "죄송합니다. 레시피 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요." });
   }
 }
