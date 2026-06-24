@@ -476,8 +476,17 @@
       try { return JSON.parse(localStorage.getItem("savedRecipes") || "[]"); }
       catch { return []; }
     }
+    const MAX_SAVED = 50; // localStorage 5 MB 한계 대비 상한
     function save(arr) {
-      localStorage.setItem("savedRecipes", JSON.stringify(arr));
+      // 상한 초과분 제거 (가장 오래된 항목 순 — unshift로 앞에 추가하므로 slice(0, MAX))
+      const limited = arr.length > MAX_SAVED ? arr.slice(0, MAX_SAVED) : arr;
+      try {
+        localStorage.setItem("savedRecipes", JSON.stringify(limited));
+      } catch (e) {
+        if (e.name === "QuotaExceededError") {
+          alert("저장 공간이 부족합니다. 오래된 레시피를 삭제해 주세요.");
+        }
+      }
     }
 
     let allRecipes = load();
@@ -485,6 +494,16 @@
     let selecting = false;
     let selectedIds = new Set();
     let viewMode = "grid"; // grid | list
+
+    // XSS 방어: 사용자 입력 문자열을 innerHTML에 삽입하기 전 이스케이프
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#x27;");
+    }
 
     // ── 필터 & 정렬 ───────────────────────────
     const searchInput = document.getElementById("search-input");
@@ -521,6 +540,50 @@
     const gridBtn = document.getElementById("grid-btn");
     const listBtn = document.getElementById("list-btn");
     const recipeList = document.getElementById("recipe-list");
+
+    // ── 이벤트 위임: recipeList에 한 번만 바인딩 ────────────────
+    // renderList가 innerHTML을 교체할 때마다 재바인딩하지 않아도 됨
+    recipeList.addEventListener("change", e => {
+      const cb = e.target.closest("input[type=checkbox][data-id]");
+      if (!cb) return;
+      const id = cb.dataset.id;
+      const card = cb.closest(".recipe-card");
+      if (cb.checked) { selectedIds.add(id); card.classList.add("selected"); }
+      else { selectedIds.delete(id); card.classList.remove("selected"); }
+      updateBulkMsg();
+    });
+
+    recipeList.addEventListener("click", e => {
+      // 보기 버튼
+      const viewBtn = e.target.closest(".btn-view[data-id]");
+      if (viewBtn) {
+        if (selecting) return;
+        const entry = allRecipes.find(en => en.id === viewBtn.dataset.id);
+        if (entry) openModal(entry);
+        return;
+      }
+      // 삭제 버튼
+      const delBtn = e.target.closest(".btn-del[data-id]");
+      if (delBtn) {
+        if (selecting) return;
+        const entry = allRecipes.find(en => en.id === delBtn.dataset.id);
+        if (!entry) return;
+        if (!confirm(`"${entry.recipe.name}"을 삭제할까요?`)) return;
+        allRecipes = allRecipes.filter(en => en.id !== delBtn.dataset.id);
+        save(allRecipes);
+        applyFilter();
+        return;
+      }
+      // 카드 전체 클릭 (선택 모드)
+      const card = e.target.closest(".recipe-card");
+      if (card && selecting) {
+        const cb = card.querySelector("input[type=checkbox]");
+        if (cb && e.target !== cb) {
+          cb.checked = !cb.checked;
+          cb.dispatchEvent(new Event("change"));
+        }
+      }
+    });
 
     gridBtn.addEventListener("click", () => {
       viewMode = "grid";
@@ -605,7 +668,7 @@
         const r = entry.recipe;
         const date = new Date(entry.saved_at).toLocaleDateString("ko-KR");
         const memoHtml = entry.memo
-          ? `<div class="card-memo">💬 ${entry.memo}</div>`
+          ? `<div class="card-memo">💬 ${escapeHtml(entry.memo)}</div>`
           : "";
         return `
           <div class="recipe-card${selecting ? " selecting" : ""}" data-id="${entry.id}">
@@ -629,47 +692,6 @@
           </div>`;
       }).join("");
 
-      // 이벤트 바인딩
-      recipeList.querySelectorAll(".card-check input").forEach(cb => {
-        cb.addEventListener("change", () => {
-          const id = cb.dataset.id;
-          const card = cb.closest(".recipe-card");
-          if (cb.checked) { selectedIds.add(id); card.classList.add("selected"); }
-          else { selectedIds.delete(id); card.classList.remove("selected"); }
-          updateBulkMsg();
-        });
-      });
-
-      recipeList.querySelectorAll(".btn-view").forEach(btn => {
-        btn.addEventListener("click", () => {
-          if (selecting) return;
-          const entry = allRecipes.find(e => e.id === btn.dataset.id);
-          if (entry) openModal(entry);
-        });
-      });
-
-      recipeList.querySelectorAll(".btn-del").forEach(btn => {
-        btn.addEventListener("click", () => {
-          if (selecting) return;
-          const entry = allRecipes.find(e => e.id === btn.dataset.id);
-          if (!entry) return;
-          if (!confirm(`"${entry.recipe.name}"을 삭제할까요?`)) return;
-          allRecipes = allRecipes.filter(e => e.id !== btn.dataset.id);
-          save(allRecipes);
-          applyFilter();
-        });
-      });
-
-      // 카드 전체 클릭으로 선택
-      recipeList.querySelectorAll(".recipe-card").forEach(card => {
-        card.addEventListener("click", e => {
-          if (!selecting) return;
-          const cb = card.querySelector("input[type=checkbox]");
-          if (e.target === cb) return;
-          cb.checked = !cb.checked;
-          cb.dispatchEvent(new Event("change"));
-        });
-      });
     }
 
     // ── 상세 모달 ─────────────────────────────

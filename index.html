@@ -477,7 +477,13 @@
           errorBox.style.display = "none";
           resetIngredients();
         };
+        img.onerror = () => {
+          showError("이미지를 불러올 수 없습니다. 파일이 손상되었거나 지원하지 않는 형식입니다.");
+        };
         img.src = e.target.result;
+      };
+      reader.onerror = () => {
+        showError("파일을 읽는 중 오류가 발생했습니다. 다른 이미지로 다시 시도해주세요.");
       };
       reader.readAsDataURL(file);
     }
@@ -516,7 +522,8 @@
       }, 4000);
 
       try {
-        const mimeType = currentFile.type;
+        // 캔버스가 항상 JPEG로 인코딩하므로 mimeType을 image/jpeg로 고정
+        const mimeType = "image/jpeg";
 
         const res = await fetch(`${API_BASE}/api/analyze`, {
           method: "POST",
